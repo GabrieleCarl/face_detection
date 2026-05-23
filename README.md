@@ -1,22 +1,62 @@
-# Face Detection System for a Digital Camera
-## Project Context
-ProCam S.p.A. is ready to launch a new compact digital camera, accessible and designed for young photography enthusiasts. The main goal of the product is to facilitate the shooting experience, especially for selfies with one or more people.
+# Face Detection with SVM and HOG Features
 
-## Challenge
-You have been hired as a Data Scientist to develop a system for detecting faces in images, which will help engineers automatically optimize camera settings during selfies. Your task is to create a pipeline that identifies faces in images and returns the coordinates of the bounding boxes where faces are located. If there are no faces, the pipeline will return an empty list.
+Binary face detection system built with classical computer vision techniques - no deep learning required.
 
-This is a Computer Vision problem, more precisely Face Detection.
+## Overview
 
-## Project Requirements
-1. Objective: Build a face detection system using Scikit-learn. The pipeline must be able to:
+The model classifies image regions as **face** or **non-face** using HOG (Histogram of Oriented Gradients) features fed into a Support Vector Machine (SVM) with linear kernel. A sliding window approach enables detection on full images at multiple scales.
 
- - Take an input image.
-- Return a list of bounding box coordinates where faces are present.
-- Return an empty list if there are no faces in the image.
+## Dataset
 
-2. Limitations:
+| Split | Source | Size |
+|---|---|---|
+| Faces | Labeled Faces in the Wild (LFW) - Kaggle | 5,000 images |
+| Non-faces | COCO 2017 Train (filtered: no person category) | 5,000 images |
 
-- Dataset: You are not provided with a dataset. You must search for a suitable dataset online or, in the absence of alternatives, build it yourself.
-- Pre-trained models: You are not allowed to use pre-trained models. The Face Detection model must be trained from scratch with Scikit-learn.
-- Compute resources: You will be working on a system with limited computational capabilities. The model must be optimized to use few resources.
-- Development environment: Google Colab
+Non-face images were filtered programmatically using COCO JSON annotations to exclude any image containing a person, ensuring clean negative examples.
+
+## Pipeline
+
+1. **Preprocessing** - grayscale conversion, resize to 150×150, normalization to [0, 1]
+2. **Augmentation** - random rotation, scaling, translation and brightness variation (batch processing to control RAM usage)
+3. **Feature extraction** - HOG features via scikit-image
+4. **Training** - SVM with linear kernel, optimized with GridSearchCV
+5. **Inference** - sliding window at multiple scales (75, 50, 25 px) with probability thresholding (default: 0.65)
+
+## Results
+
+Evaluated on 30% hold-out test set (3,000 samples).
+
+| Metric | Score |
+|---|---|
+| ROC-AUC | **0.9597** |
+| Average Precision (AP) | **0.9575** |
+| Correct predictions (TP + TN) | **2,683 / 3,000 (89.4%)** |
+| False negatives (missed faces) | 174 |
+| False positives (non-faces misclassified) | 143 |
+
+## Tech Stack
+
+Python · NumPy · OpenCV · scikit-image · scikit-learn · Matplotlib · joblib
+
+## How to Run
+
+The notebook is optimized for **Google Colab**.
+
+1. Open `face_detection.ipynb` on Google Colab
+2. Run cells sequentially
+3. The trained model is saved automatically to Google Drive as `face_detection_svm.pkl`
+
+To run inference on a new image, load the saved model:
+
+```python
+import joblib
+model = joblib.load("face_detection_svm.pkl")
+```
+
+## Project Structure
+
+```
+face_detection/
+└── face_detection.ipynb   # Main notebook (training + inference)
+```
